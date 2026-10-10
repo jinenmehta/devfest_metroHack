@@ -1,5 +1,5 @@
 // App-shell cache: the controller app opens and triages with no network (or even with the local server stopped).
-const CACHE = 'ech-v1';
+const CACHE = 'sunvai-v2';
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'classifier.js', 'samples.js', 'manifest.webmanifest', 'icon.svg'];
 
 self.addEventListener('install', (e) => {

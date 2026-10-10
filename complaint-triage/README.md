@@ -1,6 +1,9 @@
-# Every Complaint Heard — PS-07, DevFest Metro Hacks
+# Sunvai Grievance Desk
 
-Offline-first, multilingual complaint triage for metro station controllers.
+*Built for DevFest Metro Hacks PS-07, "Every Complaint Heard".*
+
+Sunvai is a passenger grievance desk for metro station controllers. It has a dashboard, department inboxes, complaint detail with a reply composer and activity log, import and export, and settings.
+Offline-first, multilingual complaint triage.
 Sorts a mixed batch of complaints (Gujarati, Hindi, English, Gujlish, Hinglish · app / social / email / paper) into
 department queues with an explainable urgency score and a draft reply in the complainant's own language and script.
 It runs fully on-device and syncs to HQ when connectivity returns.
@@ -19,12 +22,13 @@ Each complaint then gets a **✨ Refine with local Gemma** button. Without a mod
 
 ## 2-minute demo script
 
-1. **Board → Load sample batch.** 25 complaints in 5 languages are triaged in a few ms. Critical items (smoke, harassment, unattended bag, trapped in lift, injury) appear in the red strip on top.
-2. **Click a Gujarati or Hinglish ticket.** Show the urgency breakdown ("why"), the detected language, the station, and the draft reply in the same script. Switch the reply language to show the alternatives.
-3. **Tick "Simulate no network"** (or turn off Wi-Fi). Add a complaint on **Add complaints**. It is triaged instantly and the queue counter goes up.
-4. **Stop the server** and reload the page. The app still opens from the service-worker cache and keeps triaging.
-5. **Restart the server and untick offline.** The outbox auto-syncs. **Sync & HQ** shows the records at HQ.
-6. **Re-route a ticket** to another department. The device learns from the correction for future complaints.
+1. **First launch:** enter your name and station. Then go to **Settings → Load demo data**. The dashboard fills with 25 complaints in 5 languages, and the critical ones appear under "Needs attention".
+2. **Open a Gujarati or Hinglish complaint** in the inbox. Show the urgency breakdown, the detected language and station, and the reply drafted in the same script. Change the reply language to show the other options.
+3. **Acknowledge** the complaint, **add a note**, **mark the reply as sent**, then **resolve** it. Each step appears in the activity timeline.
+4. Go to **Settings → Work offline** (or turn off Wi-Fi). Create a **New complaint**: the live assessment updates as you type, and the top bar shows "Offline · N pending".
+5. **Stop the server** and reload the page. The app still opens from the service-worker cache.
+6. **Restart the server and switch offline mode off.** Pending updates sync automatically.
+7. **Move a complaint to another department.** The device learns from the correction for similar complaints.
 
 ## Design notes
 

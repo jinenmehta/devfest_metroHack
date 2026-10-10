@@ -60,6 +60,7 @@ a { color: var(--primary); text-decoration: none; }
 .side-foot { margin-top: auto; font-size: 12px; border-top: 1px solid #1d2840; padding: 12px 6px 0; display: flex; flex-direction: column; gap: 4px; }
 .side-foot strong { color: #fff; font-weight: 600; }
 
+.scrim { display: none; }
 .main { display: flex; flex-direction: column; min-width: 0; }
 .topbar { position: sticky; top: 0; z-index: 5; display: flex; gap: 12px; align-items: center; padding: 10px 24px; background: var(--surface); border-bottom: 1px solid var(--border); }
 .search { flex: 1; max-width: 560px; }

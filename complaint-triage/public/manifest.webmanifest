@@ -1,6 +1,6 @@
 {
-  "name": "Every Complaint Heard",
-  "short_name": "Complaints",
+  "name": "Sunvai Grievance Desk",
+  "short_name": "Sunvai",
   "description": "Offline-first multilingual complaint triage for metro station controllers",
   "start_url": "./",
   "display": "standalone",
