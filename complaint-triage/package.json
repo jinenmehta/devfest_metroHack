@@ -1,0 +1,11 @@
+{
+  "name": "every-complaint-heard",
+  "version": "1.0.0",
+  "description": "PS-07 Metro Hacks: offline-first multilingual complaint triage for metro station controllers",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/classifier.test.js"
+  },
+  "engines": { "node": ">=18" }
+}

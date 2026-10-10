@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sunvai · Grievance Desk</title>
+  <meta name="description" content="Passenger grievance desk for metro station controllers. Works offline.">
+  <meta name="theme-color" content="#0b1324">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <a class="logo" href="#/dashboard">
+        <img src="icon.svg" alt="" width="30" height="30">
+        <span><strong>Sunvai</strong><small>Grievance Desk</small></span>
+      </a>
+      <a class="btn btn-primary btn-block" href="#/new">+ New complaint</a>
+      <nav class="nav" id="nav"></nav>
+      <div class="side-foot" id="sideFoot"></div>
+    </aside>
+    <div class="scrim" id="scrim"></div>
+
+    <div class="main">
+      <header class="topbar">
+        <button class="icon-btn menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
+        <form class="search" id="searchForm" role="search">
+          <input id="globalSearch" type="search" placeholder="Search complaints, stations, reference numbers…" autocomplete="off">
+        </form>
+        <div class="top-right">
+          <button class="conn" id="connChip" title="Connection and sync status"></button>
+          <a class="avatar" id="avatar" href="#/settings" title="Settings"></a>
+        </div>
+      </header>
+      <div class="view" id="view"></div>
+    </div>
+  </div>
+
+  <dialog id="onboard" class="modal">
+    <form method="dialog" id="onboardForm">
+      <img src="icon.svg" alt="" width="44" height="44">
+      <h2>Set up this device</h2>
+      <p class="muted">Sunvai keeps working without a network. Complaints are stored on this device and sent to the control centre whenever a connection is available.</p>
+      <label>Your name<input name="name" required placeholder="e.g. R. Patel"></label>
+      <label>Station<select name="station" id="onboardStation"></select></label>
+      <div class="modal-actions"><button class="btn btn-primary" value="ok">Get started</button></div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="classifier.js"></script>
+  <script src="samples.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
