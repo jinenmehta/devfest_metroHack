@@ -16,6 +16,21 @@ node server.js          # Node 18+, zero dependencies
 npm test                # classifier checks on the 25-complaint sample batch
 ```
 
+### Control centre console
+
+Open **http://localhost:8080/admin**. The default password is `admin123`; change it with the `ADMIN_PASSWORD` environment variable (`$env:ADMIN_PASSWORD='…'; node server.js`).
+
+| Page | What the admin can do |
+|---|---|
+| Network overview | See active, critical, overdue, escalated and resolved-today totals across all stations, a station risk table, department load and device status |
+| All complaints | Filter by station, department, urgency and status, search and export to CSV. Open a complaint to **re-route** it, **change its status**, **escalate** it, or **send an instruction or note** to the station |
+| Escalations | Active complaints under control-centre watch |
+| Stations & devices | Every station desk: controller, online / idle / offline, last sync, workload |
+| Policy & routing | Set the **response targets** per urgency level and **extra routing keywords** per department, test routing live, then publish. Devices apply the policy on their next sync and keep it for offline use |
+| Audit log | Sign-ins, admin actions, policy changes and device uploads |
+
+Sync works in both directions. Stations push their complaints, and the control centre's edits and policy come back in the same request. A device that was offline merges control-centre notes and escalations without losing its own changes.
+
 Optional local AI: install Ollama, then run `ollama pull <gemma model>`. Start the server with
 `OLLAMA_MODEL=<model> node server.js` (in PowerShell: `$env:OLLAMA_MODEL='<model>'; node server.js`), or type the model name on the **Sync & HQ** tab.
 Each complaint then gets a **✨ Refine with local Gemma** button. Without a model, the rule engine does all the work.
@@ -49,7 +64,8 @@ Each complaint then gets a **✨ Refine with local Gemma** button. Without a mod
 ## Files
 
 ```
-server.js              static server + /api/sync, /api/hq, /api/llm (Ollama proxy)
+server.js              static server + /api/sync (two-way), /api/config, /api/admin/*, /api/llm (Ollama proxy)
+public/admin.html/.js  control centre console
 public/classifier.js   triage engine (language, department, urgency, station, replies, learning)
 public/app.js          UI, storage, outbox sync, local-LLM refinement
 public/samples.js      25 synthetic multilingual complaints

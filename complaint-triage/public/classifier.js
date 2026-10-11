@@ -104,6 +104,13 @@
     ]),
   };
 
+  // Extra routing keywords set centrally by the control centre (policy), per department.
+  let CUSTOM = {};
+  function setCustomTerms(map) {
+    CUSTOM = {};
+    for (const d of Object.keys(map || {})) if (LEXICON[d]) CUSTOM[d] = compile((map[d] || []).map((t) => ({ t: String(t), w: 1.5 })));
+  }
+
   // ---------- Urgency signals (each counted once) ----------
   const SIGNALS = [
     { id: 'fire', pts: 45, label: 'Fire / smoke / electrical hazard',
@@ -202,6 +209,7 @@
     for (const d of DEPT_ORDER) {
       scores[d] = 0; hits[d] = [];
       for (const term of LEXICON[d]) if (term.m(norm)) { scores[d] += term.w; hits[d].push(term.t); }
+      for (const term of CUSTOM[d] || []) if (term.m(norm)) { scores[d] += term.w; hits[d].push(term.t); }
     }
     // On-device learning: terms that controllers re-routed in the past nudge the score.
     if (opts.learned) {
@@ -339,7 +347,7 @@
     return out;
   }
 
-  const api = { DEPARTMENTS, DEPT_ORDER, LANGS, SLA, STATIONS, detectLanguage, classify, levelFor, draftReply, learnCorrection };
+  const api = { DEPARTMENTS, DEPT_ORDER, LANGS, SLA, STATIONS, detectLanguage, classify, levelFor, draftReply, learnCorrection, setCustomTerms };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Triage = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

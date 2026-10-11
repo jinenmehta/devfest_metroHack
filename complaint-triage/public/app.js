@@ -2,6 +2,9 @@
 (() => {
   'use strict';
   const T = window.Triage;
+  // Behind an ngrok free tunnel, API calls must skip ngrok's browser-warning page.
+  const _fetch = window.fetch.bind(window);
+  const fetch = (url, opts = {}) => _fetch(url, { ...opts, headers: { 'ngrok-skip-browser-warning': '1', ...(opts.headers || {}) } });
   const $ = (s, el = document) => el.querySelector(s);
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -27,7 +30,16 @@
 
   const ui = { q: '', status: 'active', sort: 'urgency', lang: '' };
 
-  const SLA_MS = { critical: 15 * 60e3, high: 4 * 3600e3, medium: 24 * 3600e3, low: 72 * 3600e3 };
+  // Response targets and extra routing keywords come from the control-centre policy (cached for offline use).
+  const DEFAULT_SLA_MIN = { critical: 15, high: 240, medium: 1440, low: 4320 };
+  let SLA_MS = {};
+  function applyPolicy(policy) {
+    const min = { ...DEFAULT_SLA_MIN, ...(policy?.slaMinutes || {}) };
+    SLA_MS = Object.fromEntries(Object.entries(min).map(([k, v]) => [k, v * 60e3]));
+    T.setCustomTerms(policy?.customTerms || {});
+  }
+  applyPolicy(state.settings.policy);
+  const slaLabel = (level) => { const m = SLA_MS[level] / 60e3; return m < 60 ? `${m} min` : m % 1440 === 0 ? `${m / 1440} day${m === 1440 ? '' : 's'}` : `${+(m / 60).toFixed(1)} h`; };
   const CHANNELS = { app: 'Mobile app', social: 'Social media', email: 'Email', paper: 'Paper form' };
   const CH_ICON = { app: '📱', social: '💬', email: '✉️', paper: '📝' };
   const LEVEL = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low' };
@@ -124,24 +136,33 @@
   async function trySync(manual = false) {
     if (state.syncing) return;
     const ids = Object.keys(state.outbox);
-    if (!ids.length) { if (manual) toast('Everything is synced with the control centre'); renderShell(); return; }
     if (!isOnline()) { if (manual) toast(`You're offline. ${ids.length} update(s) will be sent when you reconnect.`); renderShell(); return; }
-    state.syncing = true; renderShell();
+    state.syncing = ids.length > 0; renderShell();
     const records = ids.map(byId).filter(Boolean).map(({ deptScores, matched, ...rest }) => rest);
     try {
       const res = await fetch('/api/sync', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ device: state.device, records }), signal: AbortSignal.timeout(8000),
+        body: JSON.stringify({ device: state.device, profile: state.settings.profile, records, since: state.settings.lastPull || 0 }),
+        signal: AbortSignal.timeout(8000),
       });
       if (!res.ok) throw new Error('HTTP ' + res.status);
-      const { accepted } = await res.json();
+      const { accepted, updates = [], config, serverTime } = await res.json();
       for (const a of accepted) if (state.outbox[a.id] !== undefined && state.outbox[a.id] <= a.updatedAt) delete state.outbox[a.id];
       for (const id of Object.keys(state.outbox)) if (!byId(id)) delete state.outbox[id];
-      save(KEY.outbox, state.outbox);
+      const pulled = mergeUpdates(updates);
+      const policyChanged = config && config.version !== state.settings.policy?.version;
+      if (policyChanged) {
+        state.settings.policy = config; applyPolicy(config);
+        for (const c of state.complaints) c.dueAt = c.receivedAt + SLA_MS[c.level];
+        addLog(`Received control-centre policy v${config.version}`);
+      }
+      persist();
       state.server = true;
-      state.settings.lastSync = Date.now(); saveSettings();
-      addLog(`Sent ${accepted.length} update(s) to the control centre`);
-      if (manual) toast(`Synced ${accepted.length} update(s)`);
+      state.settings.lastSync = Date.now(); state.settings.lastPull = serverTime || state.settings.lastPull; saveSettings();
+      if (accepted.length) addLog(`Sent ${accepted.length} update(s) to the control centre`);
+      if (pulled) { addLog(`Received ${pulled} update(s) from the control centre`); toast(`${pulled} complaint(s) updated by the control centre`); }
+      if (pulled || policyChanged) renderView();
+      if (manual && !pulled) toast(accepted.length ? `Synced ${accepted.length} update(s)` : 'Everything is up to date');
     } catch (e) {
       state.server = false;
       addLog(`Sync failed (${e.message}); will retry`);
@@ -150,6 +171,28 @@
       state.syncing = false; renderShell();
       if (route().view === 'settings') renderSettingsStatus();
     }
+  }
+
+  // Control-centre edits: take the whole record if it is newer, otherwise fold in its notes and escalation.
+  function mergeUpdates(updates) {
+    let n = 0;
+    for (const u of updates) {
+      const local = byId(u.id);
+      if (!local) continue;
+      if ((u.hqUpdatedAt || 0) <= (local.hqUpdatedAt || 0)) continue;
+      if (u.updatedAt > local.updatedAt) {
+        Object.assign(local, u, { device: state.device });
+        delete state.outbox[u.id];
+      } else {
+        const seen = new Set(local.history.map((h) => `${h.at}|${h.type}|${h.text}`));
+        local.history.push(...(u.history || []).filter((h) => !seen.has(`${h.at}|${h.type}|${h.text}`)));
+        local.history.sort((a, b) => a.at - b.at);
+        local.escalated = u.escalated;
+        local.hqUpdatedAt = u.hqUpdatedAt;
+      }
+      n++;
+    }
+    return n;
   }
 
   function addLog(msg) {
@@ -306,7 +349,7 @@ Urgency guide: life-safety (fire, smoke, harassment, injury, trapped, suspicious
       </div>
       <div class="tiles">
         <a class="card tile" href="#/inbox/all"><div class="k">Active complaints</div><div class="v">${act.length}</div><div class="s">${act.filter((c) => c.status === 'open').length} not yet acknowledged</div></a>
-        <a class="card tile ${crit ? 'alert' : ''}" href="#/inbox/all"><div class="k">Critical</div><div class="v">${crit}</div><div class="s">Respond within 15 min</div></a>
+        <a class="card tile ${crit ? 'alert' : ''}" href="#/inbox/all"><div class="k">Critical</div><div class="v">${crit}</div><div class="s">Respond within ${slaLabel('critical')}</div></a>
         <a class="card tile ${od ? 'alert' : ''}" href="#/inbox/overdue"><div class="k">Past SLA</div><div class="v">${od}</div><div class="s">Overdue for response</div></a>
         <div class="card tile"><div class="k">Resolved today</div><div class="v">${resolvedToday}</div><div class="s">${avgAck != null ? 'Avg. acknowledgement ' + dur(avgAck) : 'No acknowledgements yet'}</div></div>
       </div>
@@ -391,6 +434,7 @@ Urgency guide: life-safety (fire, smoke, harassment, injury, trapped, suspicious
                 ${queue === 'all' || queue === 'overdue' ? `<span class="chip">${esc(T.DEPARTMENTS[c.dept].label)}</span>` : ''}
                 <span class="chip">${esc(T.LANGS[c.lang])}</span>
                 ${active(c) ? `<span class="chip ${overdue(c) ? 'overdue' : ''}">${dueLabel(c)}</span>` : `<span class="status resolved">Resolved</span>`}
+                ${c.escalated && active(c) ? '<span class="chip overdue">Escalated</span>' : ''}
                 ${c.confidence < 0.5 && !c.overridden ? '<span class="chip" title="Routing confidence is low; please check the department">Check routing</span>' : ''}
               </div></a>`).join('') || `<div class="empty"><h3>All clear</h3><p>No complaints in this view.</p></div>`}
           </div>
@@ -417,7 +461,7 @@ Urgency guide: life-safety (fire, smoke, harassment, injury, trapped, suspicious
       <div class="pane-h">
         <div>
           <a class="btn btn-sm back" href="#/inbox/${queue}">← Back</a>
-          <h2>${esc(T.DEPARTMENTS[c.dept].label)} <span class="badge ${c.level}">${LEVEL[c.level]} · ${c.urgency}</span> ${c.aiRefined ? '<span class="chip ai">AI reviewed</span>' : ''}</h2>
+          <h2>${esc(T.DEPARTMENTS[c.dept].label)} <span class="badge ${c.level}">${LEVEL[c.level]} · ${c.urgency}</span> ${c.aiRefined ? '<span class="chip ai">AI reviewed</span>' : ''} ${c.escalated ? '<span class="chip overdue">Escalated by control centre</span>' : ''}</h2>
           <div class="muted small" style="margin-top:4px">${esc(c.id)} · <span class="status ${c.status}">${STATUS[c.status]}</span>${active(c) ? ` · <span style="color:${overdue(c) ? 'var(--critical)' : 'inherit'}">${dueLabel(c)}</span>` : ''}</div>
         </div>
         <div class="row">${actions}</div>
@@ -468,7 +512,7 @@ Urgency guide: life-safety (fire, smoke, harassment, injury, trapped, suspicious
             <div class="meter" style="margin-top:8px"><span style="width:${c.urgency}%;background:${LEVEL_COLOR[c.level]}"></span></div>
             <ul class="why">${c.signals.map((s) => `<li><span>${esc(s.label)}</span><span>+${s.pts}</span></li>`).join('')}
               ${c.aiRefined ? `<li><span>Adjusted by AI review</span><span>${c.urgency - total >= 0 ? '+' : ''}${c.urgency - total}</span></li>` : ''}</ul>
-            <div class="small muted" style="margin-top:8px">Response target: ${T.SLA[c.level]}</div>
+            <div class="small muted" style="margin-top:8px">Response target: ${slaLabel(c.level)}</div>
           </div></div>
           <div class="card"><div class="card-b">
             <dl class="facts">
@@ -571,7 +615,7 @@ Urgency guide: life-safety (fire, smoke, harassment, injury, trapped, suspicious
         <div class="row" style="margin:10px 0"><span class="badge ${r.level}">${LEVEL[r.level]} · ${r.urgency}</span><span class="chip">${esc(T.LANGS[r.lang])}</span><span class="chip">${esc(st || 'Station not detected')}</span></div>
         <div class="meter"><span style="width:${r.urgency}%;background:${LEVEL_COLOR[r.level]}"></span></div>
         <ul class="why">${r.signals.map((s) => `<li><span>${esc(s.label)}</span><span>+${s.pts}</span></li>`).join('')}</ul>
-        <p class="small muted" style="margin-bottom:0">Response target: ${T.SLA[r.level]}. A reply will be drafted in ${esc(T.LANGS[r.lang])}.</p>`;
+        <p class="small muted" style="margin-bottom:0">Response target: ${slaLabel(r.level)}. A reply will be drafted in ${esc(T.LANGS[r.lang])}.</p>`;
     };
     form.oninput = preview;
     form.onsubmit = (e) => {
@@ -663,7 +707,7 @@ Urgency guide: life-safety (fire, smoke, harassment, injury, trapped, suspicious
           <div class="set-row"><div><div>Clear this device</div><div class="d">Remove all complaints stored on this device.</div></div>
             <button class="btn btn-danger" id="wipe">Clear data</button></div>
         </div>
-        <p class="small muted">Sunvai Grievance Desk v1.0 · Device ${esc(state.device)}</p>
+        <p class="small muted">Sunvai Grievance Desk v1.1 · Device ${esc(state.device)} · <a href="/admin" target="_blank" rel="noopener">Control centre console</a></p>
       </div>`;
 
     $('#profForm').onsubmit = (e) => {

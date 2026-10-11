@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sunvai Control Centre</title>
+  <meta name="description" content="Network-wide oversight of passenger complaints across all metro stations.">
+  <meta name="theme-color" content="#0b1324">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="login-wrap" id="login" hidden>
+    <form class="card login-card" id="loginForm">
+      <img src="icon.svg" alt="" width="44" height="44">
+      <div><h1>Control Centre</h1><p class="muted" style="margin:4px 0 0">Sign in to oversee complaints across all stations.</p></div>
+      <label>Admin password<input type="password" name="password" required autocomplete="current-password" autofocus></label>
+      <p class="err" id="loginErr"></p>
+      <button class="btn btn-primary">Sign in</button>
+      <a class="small" href="/">← Back to station app</a>
+    </form>
+  </div>
+
+  <div class="app" id="adminApp" hidden>
+    <aside class="sidebar" id="sidebar">
+      <a class="logo" href="#/overview">
+        <img src="icon.svg" alt="" width="30" height="30">
+        <span><strong>Sunvai <span class="role-tag">Admin</span></strong><small>Control Centre</small></span>
+      </a>
+      <nav class="nav" id="nav"></nav>
+      <div class="side-foot">
+        <span id="liveTag" class="live">Live</span>
+        <a href="/" style="color:var(--side-text)">Open station app ↗</a>
+        <button class="btn btn-sm" id="logout" style="margin-top:6px">Sign out</button>
+      </div>
+    </aside>
+    <div class="scrim" id="scrim"></div>
+    <div class="main">
+      <header class="topbar">
+        <button class="icon-btn menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
+        <form class="search" id="searchForm" role="search">
+          <input id="globalSearch" type="search" placeholder="Search all complaints by text, station or reference…" autocomplete="off">
+        </form>
+        <div class="top-right"><span class="muted small" id="updatedAt"></span><button class="btn btn-sm" id="refresh">Refresh</button></div>
+      </header>
+      <div class="view" id="view"></div>
+    </div>
+  </div>
+
+  <dialog class="drawer" id="drawer"></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="classifier.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

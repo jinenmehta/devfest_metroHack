@@ -1,4 +1,62 @@
 {
   "records": {},
-  "syncs": []
+  "syncs": [],
+  "devices": {
+    "STN-K9VUA": {
+      "device": "STN-K9VUA",
+      "lastSeen": 1791737171779,
+      "name": "",
+      "station": ""
+    },
+    "STN-RBUZ9": {
+      "device": "STN-RBUZ9",
+      "lastSeen": 1791737195632,
+      "name": "Jinen",
+      "station": "Thaltej Gam"
+    },
+    "DSK-W7W87": {
+      "device": "DSK-W7W87",
+      "lastSeen": 1791738133007,
+      "name": "Jinen Mehta",
+      "station": "Old High Court"
+    }
+  },
+  "audit": [
+    {
+      "at": 1791737543983,
+      "actor": "admin",
+      "action": "login",
+      "detail": "Signed in to the control centre"
+    },
+    {
+      "at": 1791737533889,
+      "actor": "admin",
+      "action": "login",
+      "detail": "Signed in to the control centre"
+    },
+    {
+      "at": 1791737114403,
+      "actor": "admin",
+      "action": "login",
+      "detail": "Signed in to the control centre"
+    }
+  ],
+  "config": {
+    "version": 1,
+    "slaMinutes": {
+      "critical": 15,
+      "high": 240,
+      "medium": 1440,
+      "low": 4320
+    },
+    "customTerms": {
+      "safety": [],
+      "lifts": [],
+      "fare": [],
+      "staff": [],
+      "cleanliness": [],
+      "general": []
+    },
+    "updatedAt": 0
+  }
 }
